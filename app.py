@@ -25,48 +25,45 @@ for line in file:
 	## the entire last name. This will help us identify the Slack users. This should work for most names. 
 	emailCode = namePartition[0][0].lower() + namePartition[1].lower()
 
-	# Saves the names of all people wh should be in the group
+	## Saves the names of all people wh should be in the group
 	if (dataPartition[2] == 'Y'):
 		addList.append(emailCode)
 		
-	# Saves the names of all the people who shouldn't be in the group
+	## Saves the names of all the people who shouldn't be in the group
 	else:
 		kickList.append(emailCode)		
 
+## Divides up the slack response object into the portion we desire
 memberList = slack.channels.info(credential.generalChannelID)
 userCodesFirstSlice = memberList.raw.split("members\":[", 1)
 userCodesSecondSlice = userCodesFirstSlice[1].split("]", 1)
 userCodes = userCodesSecondSlice[0].split(',')
 
-## Fetches slack userID codes and places them in a list
-idList = []
+## Uses the IDs to add or remove senators as necessary
 for senatorID in userCodes:
-	idList.append(senatorID.replace("\"",""))
-
-
-for senatorID in idList:
+	senatorID = senatorID.replace("\"","")
 	
-	## This is horrendous and I will fix it
+	## Divides the Response object into the parts we desire
 	userInfo = slack.users.info(senatorID)
-	userInfoFirstSlice = userInfo.raw.split("\"email\":\"",1)
-	userInfoSecondSlice = userInfoFirstSlice[1].split("@",1)
-	userID1 = userInfoSecondSlice[0].replace("1","")
-	userID2 = userID1.replace("2","")
-	userID3 = userID2.replace("0","")
-	userID4 = userID3.replace("9","")
-	userID5 = userID4.replace("8", "")
-	userID6 = userID5.replace("7","")
+	userIDFirstSlice = userInfo.raw.split("\"email\":\"",1)
+	userIDSecondSlice = userIDFirstSlice[1].split("@",1)
+	userID = userIDSecondSlice[0]
 
-	## if the email is in addList, then they are added to the group
-	## if the email is in kickList, then they are kicked from the group
+	## Removes extraneous numbers from the userID
+	for char in userID:
+		if char in "012789":
+			userID = userID.replace(char, "")
+
+	## If the email is in addList, then they are added to the group
+	## If the email is in kickList, then they are kicked from the group
 	## We pass over errors here to avoid the program crashing if someone 
 	## is already not in the group when the program tries to kick them.
 	try: 
-		if userID6 in addList:
-			print userID6 + ' added!'
+		if userID in addList:
+			print userID + ' added!'
 			slack.groups.invite(credential.senatorChannelID, senatorID)
-		if userID6 in kickList:
-			print userID6 + ' removed!'
+		if userID in kickList:
+			print userID + ' removed!'
 			slack.groups.kick(credential.senatorChannelID, senatorID)
 	except:
 		pass
